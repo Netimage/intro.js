@@ -69,19 +69,36 @@
     };
   }
 
-  /**
-   * Initiate a new introduction/guide from an element in the page
-   *
-   * @api private
-   * @method _introForElement
-   * @param {Object} targetElm
-   * @returns {Boolean} Success or not?
-   */
-  function _introForElement(targetElm) {
-    var introItems = [],
-        self = this;
+	function _initQuestionMarks() {
+		if (this._options.steps) {
+		var duffCounter = 0;
+		for (var i = 0, stepsLength = this._options.steps.length; i < stepsLength; i++) {
+			var currentItem = _cloneObject(this._options.steps[i]);
+			if (typeof(currentItem.element) !== 'undefined' && currentItem.element != null && $(currentItem.element).length == 0) {
+				duffCounter++;
+			}
+			if (currentItem.questionMark) {
+				// questionMark?
+				var questionMark = $('<a href="#" data-step="' + (i + 1 - duffCounter) + '" class="introjs-questionmark ui-icon ui-icon-help">?</a>');
+				$(currentItem.element).prepend(questionMark);
+			}
+		}
+	}
+  }
 
-    if (this._options.steps) {
+	/**
+	 * Initiate a new introduction/guide from an element in the page
+	 *
+	 * @api private
+	 * @method _introForElement
+	 * @param {Object} targetElm
+	 * @returns {Boolean} Success or not?
+	 */
+	function _introForElement(targetElm) {
+		var introItems = [],
+			self = this;
+
+		if (this._options.steps) {
       //use steps passed programmatically
       var allIntroSteps = [];
 
@@ -93,6 +110,12 @@
         if (typeof(currentItem.element) === 'string') {
           //grab the element with given selector from the page
           currentItem.element = document.querySelector(currentItem.element);
+			if (
+				typeof(currentItem.element) === 'undefined' || currentItem.element == null // Element was specified but not found.
+				|| !$(currentItem.element).is(':visible') // Element not visible
+				) {
+				continue;
+			}
         }
 
         //intro without element
@@ -195,11 +218,11 @@
       self._onKeyDown = function(e) {
         if (e.keyCode === 27 && self._options.exitOnEsc == true) {
           //escape key pressed, exit the intro
-          //check if exit callback is defined
+          _exitIntro.call(self, targetElm);
+          //check if any callback is defined
           if (self._introExitCallback != undefined) {
             self._introExitCallback.call(self);
           }
-          _exitIntro.call(self, targetElm);
         } else if(e.keyCode === 37) {
           //left arrow
           _previousStep.call(self);
@@ -214,13 +237,6 @@
             _previousStep.call(self);
           } else if (target && target.className.indexOf('introjs-skipbutton') > 0) {
             //user hit enter while focusing on skip button
-            if (self._introItems.length - 1 == self._currentStep && typeof (self._introCompleteCallback) === 'function') {
-                self._introCompleteCallback.call(self);
-            }
-            //check if any callback is defined
-            if (self._introExitCallback != undefined) {
-              self._introExitCallback.call(self);
-            }
             _exitIntro.call(self, targetElm);
           } else {
             //default behavior for responding to enter
@@ -282,9 +298,6 @@
   function _goToStep(step) {
     //because steps starts with zero
     this._currentStep = step - 2;
-    if (typeof (this._introItems) !== 'undefined') {
-      _nextStep.call(this);
-    }
   }
 
   /**
@@ -317,7 +330,9 @@
       this._introBeforeChangeCallback.call(this, nextStep.element);
     }
 
-    _showElement.call(this, nextStep);
+    while (false == _showElement.call(this, nextStep)) {
+		// Check ma tone
+	}
   }
 
   /**
@@ -1079,12 +1094,12 @@
 
     overlayLayer.onclick = function() {
       if (self._options.exitOnOverlayClick == true) {
+        _exitIntro.call(self, targetElm);
 
         //check if any callback is defined
         if (self._introExitCallback != undefined) {
           self._introExitCallback.call(self);
         }
-        _exitIntro.call(self, targetElm);
       }
     };
 
@@ -1202,6 +1217,10 @@
       _introForElement.call(this, this._targetElement);
       return this;
     },
+	initQuestionMarks: function () {
+		_initQuestionMarks.call(this);
+		return this;
+	},
     goToStep: function(step) {
       _goToStep.call(this, step);
       return this;
